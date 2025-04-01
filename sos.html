@@ -6,6 +6,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="SOS">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>SOS</title>
     <style>
         * {
@@ -150,10 +151,14 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                console.log('Slack notification sent successfully');
+                
+                const data = await response.json();
+                console.log('Notification sent successfully:', data);
+                
             } catch (error) {
                 console.error('Error sending notification:', error);
                 message.textContent = 'Error sending notification. Please try again.';
+                throw error;
             }
         }
 
