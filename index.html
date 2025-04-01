@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SOS">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>SOS</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #ffffff;
+            transition: background-color 0.3s ease;
+        }
+
+        .sos-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: #ff0000;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sos-button:active,
+        .sos-button.pressed {
+            transform: scale(0.95);
+            background-color: #cc0000;
+        }
+
+        .sos-button::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+            transform: translate(-50%, -50%) scale(0);
+            transition: transform 0.3s ease;
+        }
+
+        .sos-button:active::after,
+        .sos-button.pressed::after {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.95);
+            color: white;
+            padding: 30px 50px;
+            border-radius: 15px;
+            font-size: 32px;
+            display: none;
+            text-align: center;
+            z-index: 9999;
+            animation: fadeIn 0.5s ease;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.5);
+            border: 3px solid rgba(255, 0, 0, 0.5);
+            min-width: 80%;
+            max-width: 90%;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        @media (max-width: 480px) {
+            .sos-button {
+                width: 150px;
+                height: 150px;
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <button class="sos-button" id="sosButton">SOS</button>
+    <div class="message" id="message">Central command has been notified.<br>Reinforcements are on their way.</div>
+
+    <script>
+        const sosButton = document.getElementById('sosButton');
+        const message = document.getElementById('message');
+        let isAlarmActive = false;
+        let alarmInterval;
+
+        async function sendSlackNotification() {
+            try {
+                console.log('Attempting to send notification...');
+                const response = await fetch('/.netlify/functions/send-notification', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        text: "🚨 *SOS ALERT* 🚨\nEmergency assistance needed!",
+                        blocks: [
+                            {
+                                type: "header",
+                                text: {
+                                    type: "plain_text",
+                                    text: "🚨 SOS ALERT 🚨",
+                                    emoji: true
+                                }
+                            },
+                            {
+                                type: "section",
+                                text: {
+                                    type: "mrkdwn",
+                                    text: "*Emergency assistance needed!*\nLocation: " + window.location.href
+                                }
+                            },
+                            {
+                                type: "section",
+                                text: {
+                                    type: "mrkdwn",
+                                    text: "*Time:* " + new Date().toLocaleString()
+                                }
+                            }
+                        ]
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Notification sent successfully:', data);
+                
+            } catch (error) {
+                console.error('Error sending notification:', error);
+                message.textContent = 'Error sending notification. Please try again.';
+                throw error;
+            }
+        }
+
+        function startAlarm() {
+            if (isAlarmActive) return;
+            isAlarmActive = true;
+            
+            // Add pressed class for visual feedback
+            sosButton.classList.add('pressed');
+            
+            // Show message immediately
+            message.style.display = 'block';
+            
+            // Start flashing with more noticeable effect
+            alarmInterval = setInterval(() => {
+                document.body.style.backgroundColor = 
+                    document.body.style.backgroundColor === 'red' ? 'white' : 'red';
+                // Add a subtle pulse effect to the button
+                sosButton.style.transform = 
+                    sosButton.style.transform === 'scale(0.95)' ? 'scale(1)' : 'scale(0.95)';
+            }, 500);
+
+            // Send Slack notification
+            sendSlackNotification();
+        }
+
+        function stopAlarm() {
+            if (!isAlarmActive) return;
+            isAlarmActive = false;
+            
+            clearInterval(alarmInterval);
+            document.body.style.backgroundColor = 'white';
+            message.style.display = 'none';
+            sosButton.classList.remove('pressed');
+            sosButton.style.transform = '';
+        }
+
+        // Handle both click and touch events
+        sosButton.addEventListener('click', () => {
+            startAlarm();
+            // Ensure message is visible
+            message.style.display = 'block';
+            message.style.opacity = '1';
+        });
+        sosButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent double-tap zoom
+            startAlarm();
+        });
+        sosButton.addEventListener('touchend', (e) => {
+            e.preventDefault(); // Prevent double-tap zoom
+        });
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+    </script>
+</body>
+</html> 
