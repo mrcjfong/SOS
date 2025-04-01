@@ -13,7 +13,7 @@ app.use(express.static('./'));
 // Proxy endpoint for Slack notifications
 app.post('/send-notification', async (req, res) => {
     try {
-        const SLACK_WEBHOOK_URL = 'https://hooks.slack.com/services/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';
+        const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL;
         
         const response = await fetch(SLACK_WEBHOOK_URL, {
             method: 'POST',
