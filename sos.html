@@ -115,6 +115,7 @@
 
         async function sendSlackNotification() {
             try {
+                console.log('Attempting to send notification...');
                 const response = await fetch(SLACK_WEBHOOK_URL, {
                     method: 'POST',
                     headers: {
@@ -150,11 +151,12 @@
                 });
 
                 if (!response.ok) {
-                    throw new Error('Failed to send notification');
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 console.log('Slack notification sent successfully');
             } catch (error) {
                 console.error('Error sending notification:', error);
+                message.textContent = 'Error sending notification. Please try again.';
             }
         }
 
